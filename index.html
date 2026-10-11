@@ -2,95 +2,79 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>文件分类展示</title>
+    <title>聊天记录</title>
 </head>
 <body>
-    <h1>文件分类展示</h1>
-    <p>点击聊天记录名称，打开其中的网页或展开网页列表。</p>
+    <h1>聊天记录</h1>
+    <input type="file" id="files" accept=".txt" multiple>
+    <div id="list"></div>
+    <hr>
+    <h2 id="title"></h2>
+    <div id="content" style="white-space: pre-wrap; overflow-wrap: anywhere;"></div>
 
-    <h2>一、就业与考录</h2>
-    <ul>
-        <li>
-            <a href="https://v.wjx.cn/vm/wMBNwV3.aspx#">
-                聊天记录 2：外交部宣讲会报名问卷
-            </a>
-            —
-            <a href="聊天记录 2.txt">查看原始聊天记录</a>
-        </li>
-    </ul>
+    <script>
+        const files = document.getElementById("files");
+        const list = document.getElementById("list");
+        const title = document.getElementById("title");
+        const content = document.getElementById("content");
 
-    <h2>二、课程学习与资料</h2>
-    <ul>
-        <li>
-            <a href="https://xingyezn.github.io/web-lab/#/lesson/css-01">
-                聊天记录 3：CSS 练习网页
-            </a>
-            —
-            <a href="聊天记录 3.txt">查看原始聊天记录</a>
-        </li>
-    </ul>
+        const categories = {
+            "聊天记录 2.txt": "就业与考录",
+            "聊天记录 3.txt": "课程学习",
+            "聊天记录 4.txt": "实践教学",
+            "聊天记录 5.txt": "志愿者活动",
+            "聊天记录 9.txt": "志愿者活动",
+            "聊天记录 10.txt": "志愿者活动"
+        };
 
-    <h2>三、实践教学报名</h2>
-    <ul>
-        <li>
-            <a href="聊天记录 4.txt">
-                聊天记录 4：指定性教学基地报名通知
-            </a>
-            <p>这份记录没有网页链接，报名二维码在记录提到的 PDF 中。</p>
-        </li>
-    </ul>
+        files.onchange = function () {
+            list.replaceChildren();
+            title.textContent = "";
+            content.replaceChildren();
 
-    <h2>四、志愿者活动</h2>
-    <ul>
-        <li>
-            <a href="https://mp.weixin.qq.com/s?__biz=MzU5NzUwNDQ2Mg==&amp;mid=2247523462&amp;idx=3&amp;sn=c1a6d0c08b66f4b07a13a47ac2d19b39">
-                聊天记录 5：宋庆龄陵园志愿者招募
-            </a>
-            —
-            <a href="聊天记录 5.txt">查看原始聊天记录</a>
-        </li>
+            const groups = {};
 
-        <li>
-            <details>
-                <summary>聊天记录 9：点击选择招募网页</summary>
-                <ul>
-                    <li>
-                        <a href="https://mp.weixin.qq.com/s?__biz=MzU5NzUwNDQ2Mg==&amp;mid=2247523512&amp;idx=3&amp;sn=e56be6b368c8c4dad6b5932c41f539f8">
-                            上海体育博物馆志愿者招募
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://mp.weixin.qq.com/s?__biz=MzU5NzUwNDQ2Mg==&amp;mid=2247523512&amp;idx=2&amp;sn=eafab93b0be02b8713455e0c66a862f2">
-                            上海图书馆志愿者招募
-                        </a>
-                    </li>
-                    <li>
-                        <a href="聊天记录 9.txt">查看原始聊天记录</a>
-                    </li>
-                </ul>
-            </details>
-        </li>
+            for (const file of files.files) {
+                const category = categories[file.name] || "其他文件";
 
-        <li>
-            <details>
-                <summary>聊天记录 10：点击选择招募网页（重复记录）</summary>
-                <ul>
-                    <li>
-                        <a href="https://mp.weixin.qq.com/s?__biz=MzU5NzUwNDQ2Mg==&amp;mid=2247523512&amp;idx=3&amp;sn=e56be6b368c8c4dad6b5932c41f539f8">
-                            上海体育博物馆志愿者招募
-                        </a>
-                    </li>
-                    <li>
-                        <a href="https://mp.weixin.qq.com/s?__biz=MzU5NzUwNDQ2Mg==&amp;mid=2247523512&amp;idx=2&amp;sn=eafab93b0be02b8713455e0c66a862f2">
-                            上海图书馆志愿者招募
-                        </a>
-                    </li>
-                    <li>
-                        <a href="聊天记录 10.txt">查看原始聊天记录</a>
-                    </li>
-                </ul>
-            </details>
-        </li>
-    </ul>
+                if (!groups[category]) {
+                    const heading = document.createElement("h2");
+                    heading.textContent = category;
+                    list.appendChild(heading);
+
+                    groups[category] = document.createElement("ul");
+                    list.appendChild(groups[category]);
+                }
+
+                const item = document.createElement("li");
+                const button = document.createElement("button");
+                button.textContent = file.name;
+                button.onclick = () => showFile(file);
+                item.appendChild(button);
+                groups[category].appendChild(item);
+            }
+        };
+
+        async function showFile(file) {
+            const text = await file.text();
+            title.textContent = file.name;
+            content.replaceChildren();
+
+            const parts = text.split(/(https?:\/\/[^\s<>"“”]+)/g);
+
+            for (const part of parts) {
+                if (/^https?:\/\//.test(part)) {
+                    const link = document.createElement("a");
+                    link.href = part;
+                    link.textContent = part;
+                    link.target = "_blank";
+                    link.rel = "noopener noreferrer";
+                    content.appendChild(link);
+                } else {
+                    content.appendChild(document.createTextNode(part));
+                }
+            }
+        }
+    </script>
 </body>
 </html>
