@@ -2,34 +2,24 @@
 <html lang="zh-CN">
 <head>
     <meta charset="UTF-8">
-    <title>聊天记录查看</title>
+    <title>聊天记录</title>
 </head>
 <body>
-    <h1>聊天记录分类展示</h1>
-
-    <p>先选择聊天记录文件，可以一次选择多个。</p>
-    <input id="fileInput" type="file" accept=".txt" multiple>
-
-    <div id="fileList"></div>
-
+    <h1>聊天记录</h1>
+    <div id="list"></div>
     <hr>
-
-    <h2 id="fileTitle">请选择一个文件查看</h2>
-
-    <!-- 保留聊天记录中的换行，并让长网址自动换行 -->
-    <div id="fileContent" style="white-space: pre-wrap; overflow-wrap: anywhere;"></div>
+    <h2 id="title"></h2>
+    <div id="content" style="white-space: pre-wrap; overflow-wrap: anywhere;"></div>
 
     <script>
-        const fileInput = document.getElementById("fileInput");
-        const fileList = document.getElementById("fileList");
-        const fileTitle = document.getElementById("fileTitle");
-        const fileContent = document.getElementById("fileContent");
+        const list = document.getElementById("list");
+        const title = document.getElementById("title");
+        const content = document.getElementById("content");
 
-        // 根据文件名称确定分类
         const categories = {
             "就业与考录": ["聊天记录 2.txt"],
-            "课程学习与资料": ["聊天记录 3.txt"],
-            "实践教学报名": ["聊天记录 4.txt"],
+            "课程学习": ["聊天记录 3.txt"],
+            "实践教学": ["聊天记录 4.txt"],
             "志愿者活动": [
                 "聊天记录 5.txt",
                 "聊天记录 9.txt",
@@ -37,118 +27,67 @@
             ]
         };
 
-        function getCategory(fileName) {
-            for (const category in categories) {
-                if (categories[category].includes(fileName)) {
-                    return category;
-                }
-            }
+        let current = 0;
 
-            return "其他文件";
+        for (const [category, files] of Object.entries(categories)) {
+            const heading = document.createElement("h2");
+            heading.textContent = category;
+            list.appendChild(heading);
+
+            const ul = document.createElement("ul");
+            list.appendChild(ul);
+
+            for (const file of files) {
+                const li = document.createElement("li");
+                const button = document.createElement("button");
+                button.textContent = file;
+                button.onclick = () => showFile(file);
+                li.appendChild(button);
+                ul.appendChild(li);
+            }
         }
 
-        // 把文本中的 http / https 网址转换成链接
-        function displayTextWithLinks(text) {
-            fileContent.replaceChildren();
-
-            const urlPattern = /https?:\/\/[^\s<>"“”]+/g;
-            let lastIndex = 0;
-
-            for (const match of text.matchAll(urlPattern)) {
-                // 添加网址前面的普通文字
-                fileContent.appendChild(
-                    document.createTextNode(
-                        text.slice(lastIndex, match.index)
-                    )
-                );
-
-                // 创建可点击的网址
-                const link = document.createElement("a");
-                link.href = match[0];
-                link.textContent = match[0];
-
-                // 在新标签页打开，并保护当前页面
-                link.target = "_blank";
-                link.rel = "noopener noreferrer";
-
-                fileContent.appendChild(link);
-
-                lastIndex = match.index + match[0].length;
-            }
-
-            // 添加最后一个网址后面的普通文字
-            fileContent.appendChild(
-                document.createTextNode(text.slice(lastIndex))
-            );
-        }
-
-        // 记录当前打开的文件，避免快速切换时显示错内容
-        let currentFile = null;
-
-        async function openFile(file) {
-            currentFile = file;
-            fileTitle.textContent = file.name;
-            fileContent.textContent = "正在读取……";
+        async function showFile(file) {
+            const id = ++current;
+            title.textContent = file;
+            content.textContent = "正在读取……";
 
             try {
-                const text = await file.text();
+                const response = await fetch(encodeURIComponent(file));
 
-                if (currentFile === file) {
-                    displayTextWithLinks(text);
+                if (!response.ok) {
+                    throw new Error("HTTP " + response.status);
+                }
+
+                const text = await response.text();
+
+                if (id !== current) return;
+
+                content.replaceChildren();
+
+                const parts = text.split(
+                    /(https?:\/\/[^\s<>"“”。，；！？【】]+)/g
+                );
+
+                for (const part of parts) {
+                    if (/^https?:\/\//.test(part)) {
+                        const link = document.createElement("a");
+                        link.href = part;
+                        link.textContent = part;
+                        link.target = "_blank";
+                        link.rel = "noopener noreferrer";
+                        content.appendChild(link);
+                    } else {
+                        content.appendChild(document.createTextNode(part));
+                    }
                 }
             } catch (error) {
-                if (currentFile === file) {
-                    fileContent.textContent = "读取失败，请重新选择文件。";
+                if (id === current) {
+                    content.textContent =
+                        "读取失败，请检查文件名称和路径：" + error.message;
                 }
             }
         }
-
-        // 选择文件后，生成分类列表
-        fileInput.addEventListener("change", function () {
-            fileList.replaceChildren();
-            fileContent.replaceChildren();
-            fileTitle.textContent = "请选择一个文件查看";
-            currentFile = null;
-
-            const groups = {};
-
-            for (const file of fileInput.files) {
-                if (!file.name.toLowerCase().endsWith(".txt")) {
-                    continue;
-                }
-
-                const category = getCategory(file.name);
-
-                if (!groups[category]) {
-                    groups[category] = [];
-                }
-
-                groups[category].push(file);
-            }
-
-            for (const category in groups) {
-                const heading = document.createElement("h2");
-                heading.textContent = category;
-                fileList.appendChild(heading);
-
-                const list = document.createElement("ul");
-
-                for (const file of groups[category]) {
-                    const item = document.createElement("li");
-                    const button = document.createElement("button");
-
-                    button.textContent = file.name;
-                    button.addEventListener("click", function () {
-                        openFile(file);
-                    });
-
-                    item.appendChild(button);
-                    list.appendChild(item);
-                }
-
-                fileList.appendChild(list);
-            }
-        });
     </script>
 </body>
 </html>
